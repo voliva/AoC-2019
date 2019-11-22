@@ -1,0 +1,24 @@
+{
+  "name": "AoC-2019",
+  "version": "1.0.0",
+  "description": "Advent of Code 2019",
+  "main": "index.js",
+  "repository": "https://github.com/voliva/AoC-2019",
+  "author": "Josep M Sobrepere",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^8.1.0",
+    "ramda": "^0.26.1"
+  },
+  "devDependencies": {
+    "cross-env": "^6.0.3",
+    "prettier": "^1.19.1"
+  },
+  "scripts": {
+    "1": "node ./src/index.js first",
+    "2": "node ./src/index.js second",
+    "format": "prettier --write \"src/**/*.js\"",
+    "format:check": "prettier --list-different \"src/**/*.js\"",
+    "download": "node ./src/downloadInput.js"
+  }
+}
