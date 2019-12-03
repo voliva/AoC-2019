@@ -12,11 +12,13 @@
   },
   "devDependencies": {
     "cross-env": "^6.0.3",
-    "prettier": "^1.19.1"
+    "prettier": "^1.19.1",
+    "ts-node": "^8.5.4",
+    "typescript": "^3.7.2"
   },
   "scripts": {
-    "1": "node ./src/index.js first",
-    "2": "node ./src/index.js second",
+    "1": "ts-node ./src/index.js first",
+    "2": "ts-node ./src/index.js second",
     "format": "prettier --write \"src/**/*.js\"",
     "format:check": "prettier --list-different \"src/**/*.js\"",
     "download": "node ./src/downloadInput.js"
