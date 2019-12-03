@@ -1,4 +1,4 @@
-const {compose: c, init, split, tap} = require('ramda');
+const {compose: c, init, split, tap, ifElse, identity} = require('ramda');
 const {promisify} = require('util');
 const fs = require('fs');
 const path = require('path');
@@ -15,10 +15,20 @@ const log = v => {
   console.log(`Solved in ${end - start}ms`);
 };
 const readFile = promisify(fs.readFile);
-const getLines = c(init, split('\n'));
+const getLines = c(
+  ifElse(x => x.length > 1, init, identity),
+  split('\n')
+);
 
-const fn = require(path.join(dayDir, 'solution'))[isSecond ? 1 : 0];
+const fn = require(path.join(dayDir, 'solution'))[
+  isSecond ? 'solution2' : 'solution1'
+];
 
 readFile(path.join(dayDir, 'input'), 'utf-8').then(
-  c(log, fn, tap(() => (start = Date.now())), getLines)
+  c(
+    log,
+    fn,
+    tap(() => (start = Date.now())),
+    getLines
+  )
 );
