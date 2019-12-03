@@ -4,11 +4,11 @@ const solve = (opcodes, a, b) => {
   mem[2] = b;
 
   let pc = 0;
-  while(mem[pc] !== 99) {
-    const a = mem[mem[pc+1]];
-    const b = mem[mem[pc+2]];
-    const dest = mem[pc+3];
-    switch(mem[pc]) {
+  while (mem[pc] !== 99) {
+    const a = mem[mem[pc + 1]];
+    const b = mem[mem[pc + 2]];
+    const dest = mem[pc + 3];
+    switch (mem[pc]) {
       case 1:
         mem[dest] = a + b;
         break;
@@ -22,7 +22,7 @@ const solve = (opcodes, a, b) => {
   }
 
   return mem[0];
-}
+};
 
 const solution1 = inputLines => {
   const opcodes = inputLines[0].split(',').map(v => Number(v));
@@ -41,8 +41,8 @@ const solution2 = inputLines => {
   let noun = 12;
   let verb = 2;
   const initialValue = solve(opcodes, noun, verb);
-  const nounSigma = solve(opcodes, noun+1, verb) - initialValue;
-  const verbSigma = solve(opcodes, noun, verb+1) - initialValue;
+  const nounSigma = solve(opcodes, noun + 1, verb) - initialValue;
+  const verbSigma = solve(opcodes, noun, verb + 1) - initialValue;
   const diff = dest - initialValue;
 
   noun += Math.floor(diff / nounSigma);
@@ -55,4 +55,4 @@ const solution2 = inputLines => {
   return 100 * noun + verb;
 };
 
-module.exports = [solution1, solution2];
+export {solution1, solution2};
