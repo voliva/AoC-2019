@@ -1,9 +1,14 @@
-import {simpleSolve, solve, createInputIterator} from './intcode';
+import {
+  createInputIterator,
+  runIntcodeFromArray,
+  runIntcodeFromIterator,
+  bufferCountIterator,
+} from './intcode';
 
 const solution1 = (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
 
-  const result = simpleSolve(program, []);
+  const result = runIntcodeFromArray(program, []);
   const blocks = [] as any[];
   for (let i = 0; i < result.length; i += 3) {
     blocks.push({
@@ -19,9 +24,9 @@ const solution2 = (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
   program[0] = 2;
 
-  const input = createDefaultInputIterator(0);
-  const result = solve(program, input);
-  const blocks = bufferIterator(3, result);
+  const input = createInputIterator(0);
+  const result = runIntcodeFromIterator(program, input);
+  const blocks = bufferCountIterator(3, result);
   const field: string[][] = [];
   let paddlePosition: number | undefined = undefined;
 
@@ -75,47 +80,6 @@ const drawTile = (tile: number) => {
       return 'O';
   }
   return '?';
-};
-
-const createDefaultInputIterator = (defaultValue: number) => {
-  const input = createInputIterator();
-
-  return {
-    ...input,
-    next: () => {
-      try {
-        return input.next();
-      } catch (ex) {
-        return {
-          value: defaultValue,
-        };
-      }
-    },
-  };
-};
-
-const bufferIterator = <T>(
-  n: number,
-  iterator: Iterator<T>
-): IterableIterator<Array<T>> => {
-  const ret = {
-    next: () => {
-      let values: T[] = [];
-      for (let i = 0; i < n; i++) {
-        const result = iterator.next();
-        if (result.done) {
-          break;
-        }
-        values.push(result.value);
-      }
-      return {
-        done: values.length !== n,
-        value: values,
-      };
-    },
-    [Symbol.iterator]: () => ret,
-  };
-  return ret;
 };
 
 export {solution1, solution2};

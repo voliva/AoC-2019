@@ -1,4 +1,17 @@
-export function* solve(program: number[], input: Iterator<number, null>) {
+interface IntcodeInAction {
+  type: 'input' | 'done';
+}
+interface IntcodeOutAction {
+  type: 'output';
+  value: number;
+}
+interface IntcodeDoneAction {
+  type: 'done';
+}
+
+export function* runIntcode(
+  program: number[]
+): Generator<IntcodeInAction | IntcodeOutAction, IntcodeDoneAction, number> {
   let mem = [...program];
 
   let ip = 0;
@@ -39,15 +52,17 @@ export function* solve(program: number[], input: Iterator<number, null>) {
         ip += 4;
         break;
       case 3:
-        const next = input.next();
-        if (next.done) {
-          throw new Error('trying to read but input is empty');
-        }
-        setValue(opcode.modeA, aParam, next.value);
+        const next = yield {
+          type: 'input',
+        };
+        setValue(opcode.modeA, aParam, next);
         ip += 2;
         break;
       case 4:
-        yield a;
+        yield {
+          type: 'output',
+          value: a,
+        };
         ip += 2;
         break;
       case 5:
@@ -81,8 +96,112 @@ export function* solve(program: number[], input: Iterator<number, null>) {
     }
   }
 
+  return {
+    type: 'done' as const,
+  };
+}
+
+export function* runIntcodeFromCallback(
+  program: number[],
+  getNextInput: () => number
+) {
+  const process = runIntcode(program);
+  let lastReadValue = 0;
+  let result: IteratorResult<IntcodeInAction | IntcodeOutAction>;
+  while ((result = process.next(lastReadValue))) {
+    if (result.done) {
+      return null;
+    }
+    const action = result.value;
+    if (action.type === 'input') {
+      lastReadValue = getNextInput();
+    }
+    if (action.type === 'output') {
+      yield action.value;
+    }
+  }
+
   return null;
 }
+
+export function runIntcodeFromIterator(
+  program: number[],
+  input: Iterator<number>
+) {
+  return runIntcodeFromCallback(program, () => {
+    const inputResult = input.next();
+    if (inputResult.done) {
+      throw new Error('Intcode wants to read, but input iterator has finished');
+    }
+    return inputResult.value;
+  });
+}
+
+export function runIntcodeFromArray(program: number[], input: number[]) {
+  const result = runIntcodeFromIterator(program, input[Symbol.iterator]());
+  return [...result];
+}
+
+export const createInputIterator = (defaultValue?: number) => {
+  let values: IteratorResult<number, null>[] = [];
+  let i = 0;
+
+  const iterator: Iterator<number> = {
+    next: () => {
+      const value = values[i];
+      if (!value) {
+        if (defaultValue !== undefined) {
+          return {
+            value: defaultValue,
+          };
+        }
+        throw new Error("InputIterator - Trying to read but it's empty");
+      }
+      i++;
+      return value;
+    },
+  };
+
+  return {
+    ...iterator,
+    push: (value: number) => values.push({value}),
+    done: () =>
+      values.push({
+        done: true,
+        value: null,
+      }),
+  };
+};
+
+export const bufferIterator = <T>(
+  done: (newValue: T, buffer: T[]) => boolean,
+  iterator: Iterator<T>
+): IterableIterator<Array<T>> => {
+  const ret = {
+    next: () => {
+      let values: T[] = [];
+      do {
+        const result = iterator.next();
+        if (result.done) {
+          return {
+            done: true,
+            value: values,
+          };
+        }
+        values.push(result.value);
+      } while (!done(values[values.length - 1], values));
+
+      return {
+        value: values,
+      };
+    },
+    [Symbol.iterator]: () => ret,
+  };
+  return ret;
+};
+
+export const bufferCountIterator = <T>(count: number, iterator: Iterator<T>) =>
+  bufferIterator((_, buffer) => buffer.length === count, iterator);
 
 const readOpcode = opcode => {
   const operation = opcode % 100;
@@ -100,30 +219,3 @@ const readOpcode = opcode => {
     modeC,
   };
 };
-
-export const createInputIterator = () => {
-  let values: IteratorResult<number, null>[] = [];
-  let i = 0;
-
-  return {
-    next: () => {
-      const value = values[i];
-      if (!value) {
-        throw new Error("InputIterator - Trying to read but it's empty");
-      }
-      i++;
-      return value;
-    },
-    push: (value: number) => values.push({value}),
-    done: () =>
-      values.push({
-        done: true,
-        value: null,
-      }),
-  };
-};
-
-export function simpleSolve(program: number[], input: Array<number>) {
-  const result = solve(program, input[Symbol.iterator]());
-  return [...result];
-}
