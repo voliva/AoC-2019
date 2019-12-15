@@ -40,51 +40,33 @@ const solution1 = (inputLines: string[]) => {
     fieldBounds.max[1] = Math.max(position[1], fieldBounds.max[1]);
     field.set(position.join(','), value);
   };
-  const changeDirection = (direction: number) => {
-    switch (direction) {
-      case 0:
-      case 1:
-        const hasWest = field.has(`${position[0] - 1},${position[1]}`);
-        const hasEast = field.has(`${position[0] + 1},${position[1]}`);
-        if (hasWest && !hasEast) {
-          return 3;
-        }
-        if (!hasWest && hasEast) {
-          return 2;
-        }
-        return Math.random() < 0.5 ? 2 : 3;
-      case 2:
-      case 3:
-        const hasNorth = field.has(`${position[0]},${position[1] - 1}`);
-        const hasSouth = field.has(`${position[0]},${position[1] + 1}`);
-        if (hasNorth && !hasSouth) {
-          return 1;
-        }
-        if (!hasNorth && hasSouth) {
-          return 0;
-        }
-        return Math.random() < 0.5 ? 0 : 1;
+  const findClosest = (startPosition: number[], target: string) => {
+    const positionsToCheck = [
+      ([[], ...startPosition] as any) as [number[], number, number],
+    ];
+    const positionsVisited = new Set<string>();
+    while (positionsToCheck.length > 0) {
+      const [steps, ...pos] = positionsToCheck.shift()!;
+      const posKey = pos.join(',');
+      if (positionsVisited.has(posKey)) {
+        continue;
+      }
+      positionsVisited.add(posKey);
+
+      let fieldValue = field.get(posKey) || ' ';
+      if (fieldValue === target) {
+        return steps;
+      }
+      if (fieldValue === '.') {
+        positionsToCheck.push(
+          [[...steps, 3], pos[0] + 1, pos[1]],
+          [[...steps, 2], pos[0] - 1, pos[1]],
+          [[...steps, 1], pos[0], pos[1] + 1],
+          [[...steps, 0], pos[0], pos[1] - 1]
+        );
+      }
     }
-    return 0;
-  };
-  const considerChangeDirection = (direction: number) => {
-    const hasWest = field.has(`${position[0] - 1},${position[1]}`);
-    const hasEast = field.has(`${position[0] + 1},${position[1]}`);
-    const hasNorth = field.has(`${position[0]},${position[1] - 1}`);
-    const hasSouth = field.has(`${position[0]},${position[1] + 1}`);
-    if (direction === 0 && hasNorth && (!hasWest || !hasEast)) {
-      return changeDirection(direction);
-    }
-    if (direction === 1 && hasSouth && (!hasWest || !hasEast)) {
-      return changeDirection(direction);
-    }
-    if (direction === 2 && hasWest && (!hasNorth || !hasSouth)) {
-      return changeDirection(direction);
-    }
-    if (direction === 3 && hasEast && (!hasNorth || !hasSouth)) {
-      return changeDirection(direction);
-    }
-    return direction;
+    return null;
   };
 
   const printField = () => {
@@ -100,7 +82,7 @@ const solution1 = (inputLines: string[]) => {
     console.log('------');
   };
 
-  let steps = 0;
+  setFieldPosition(position, '.');
   for (let status of repairDroid) {
     if (status === 2) {
       move(position);
@@ -110,46 +92,21 @@ const solution1 = (inputLines: string[]) => {
     if (status === 1) {
       move(position);
       setFieldPosition(position, '.');
-      direction = considerChangeDirection(direction);
     }
     if (status === 0) {
       setFieldPosition(move([...position]), '#');
-      direction = changeDirection(direction);
     }
-
-    steps++;
-    if (steps > 5000) {
-      process.exit(1);
+    const closestEmpty = findClosest(position, ' ');
+    if (!closestEmpty) {
+      printField();
+      throw new Error('cant find empty position');
     }
+    direction = closestEmpty[0];
   }
 
   printField();
 
-  const positionsToCheck = [[0, 0, 0]];
-  const positionsVisited = new Set<string>();
-  while (positionsToCheck.length > 0) {
-    const [steps, ...pos] = positionsToCheck.shift()!;
-    const posKey = pos.join(',');
-    if (positionsVisited.has(posKey)) {
-      continue;
-    }
-    positionsVisited.add(posKey);
-
-    let fieldValue = field.get(posKey);
-    if (fieldValue === 'O') {
-      return steps;
-    }
-    if (fieldValue === '.') {
-      positionsToCheck.push(
-        [steps + 1, pos[0] + 1, pos[1]],
-        [steps + 1, pos[0] - 1, pos[1]],
-        [steps + 1, pos[0], pos[1] + 1],
-        [steps + 1, pos[0], pos[1] - 1]
-      );
-    }
-  }
-
-  return 'unknown';
+  return findClosest([0, 0], 'O')!.length;
 };
 
 const solution2 = (inputLines: string[]) => {
