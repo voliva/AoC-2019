@@ -109,7 +109,7 @@ const solution1 = (inputLines: string[]) => {
   return findClosest([0, 0], 'O')!.length;
 };
 
-const solution2 = (inputLines: string[]) => {
+const solution2 = async (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
   const field = new Map<string, string>();
   const fieldBounds = {
@@ -178,6 +178,7 @@ const solution2 = (inputLines: string[]) => {
   };
 
   const printField = () => {
+    let lines: string[] = [];
     for (let y = fieldBounds.min[1]; y <= fieldBounds.max[1]; y++) {
       let line = '';
       for (let x = fieldBounds.min[0]; x <= fieldBounds.max[0]; x++) {
@@ -186,9 +187,10 @@ const solution2 = (inputLines: string[]) => {
         const isOrigin = pos === '0,0';
         line += isDroid ? 'D' : isOrigin ? '@' : field.get(`${x},${y}`) || ' ';
       }
-      console.log(line);
+      lines.push(line);
     }
-    console.log('------');
+    lines.push('-----');
+    console.log(lines.join('\n'));
   };
 
   setFieldPosition(position, '.');
@@ -211,6 +213,8 @@ const solution2 = (inputLines: string[]) => {
       break;
     }
     direction = closestEmpty[0];
+    printField();
+    await new Promise(resolve => setTimeout(resolve, 15));
   }
 
   printField();
