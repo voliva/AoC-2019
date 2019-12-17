@@ -226,7 +226,7 @@ const findRepetition = (sequences: string[][]) => {
 };
 
 declare const process;
-const solution2 = (inputLines: string[]) => {
+const solution2 = async (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
   program[0] = 2;
   const input = createASCIIInputIterator();
@@ -301,9 +301,11 @@ const solution2 = (inputLines: string[]) => {
     if (value === 10) {
       if (line === '\n') {
         console.log(fieldStr);
+        await new Promise(resolve => setTimeout(resolve, 100));
         fieldStr = '';
+      } else {
+        fieldStr += line;
       }
-      fieldStr += line;
       line = '';
     }
   }
