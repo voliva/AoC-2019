@@ -300,8 +300,8 @@ const solution2 = async (inputLines: string[]) => {
 
     if (value === 10) {
       if (line === '\n') {
-        console.log(fieldStr);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // console.log(fieldStr);
+        // await new Promise(resolve => setTimeout(resolve, 100));
         fieldStr = '';
       } else {
         fieldStr += line;
@@ -309,6 +309,8 @@ const solution2 = async (inputLines: string[]) => {
       line = '';
     }
   }
+
+  console.log(result);
 };
 
 export {solution1, solution2};
