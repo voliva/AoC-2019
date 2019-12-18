@@ -8,7 +8,8 @@
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^8.1.0",
-    "ramda": "^0.26.1"
+    "ramda": "^0.26.1",
+    "tinyqueue": "^2.0.3"
   },
   "devDependencies": {
     "cross-env": "^6.0.3",
