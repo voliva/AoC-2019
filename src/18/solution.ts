@@ -26,11 +26,75 @@ const solution1 = (inputLines: string[]) => {
     return distances;
   }, new Map<string, Map<string, Distance>>());
 
-  return recursiveSolution(allKeys, [], originDistances, keyDistances, 4);
-  // It's less than 6352
+  // return recursiveSolution(6292, allKeys, [], originDistances, keyDistances, 4);
+  return iterativeSolution(allKeys, originDistances, keyDistances);
+  // It's less than 6292
+};
+
+// Priority queue where I'm always proceeding on the one with the less steps
+const iterativeSolution = (
+  allKeys: string[],
+  originDistances: Map<string, Distance>,
+  allDistances: Map<string, Map<string, Distance>>
+) => {
+  const reachableKeys = allKeys.filter(key => {
+    const {doors} = originDistances.get(key)!;
+    return doors.length === 0;
+  });
+
+  if (!reachableKeys.length) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  // [steps, [keys]]
+  const positionsToVisit = new TinyQueue<[number, string, string[]]>(
+    reachableKeys.map(key => {
+      const {steps} = originDistances.get(key)!;
+      return [steps, key, [key]];
+    }),
+    (a, b) => b[0] - a[0]
+  );
+
+  let minSteps = Number.POSITIVE_INFINITY;
+  while (positionsToVisit.length) {
+    const [steps, currentKey, keysUnlocked] = positionsToVisit.pop()!;
+    if (steps > minSteps) {
+      continue;
+    }
+
+    const distances = allDistances.get(currentKey)!;
+
+    if (keysUnlocked.length === allKeys.length) {
+      if (steps < minSteps) {
+        console.log(steps);
+        minSteps = steps;
+      }
+      continue;
+    }
+
+    const reachableKeys = allKeys.filter(key => {
+      if (keysUnlocked.includes(key)) {
+        return false;
+      }
+      const {doors} = distances.get(key)!;
+      return doors.every(door => keysUnlocked.includes(door.toLowerCase()));
+    });
+
+    reachableKeys.forEach(key => {
+      const distance = distances.get(key)!;
+      positionsToVisit.push([
+        steps + distance.steps,
+        key,
+        [...keysUnlocked, key],
+      ]);
+    });
+  }
+
+  return minSteps;
 };
 
 const recursiveSolution = (
+  maximumSteps: number,
   keysMissing: string[],
   keysCollected: string[],
   distances: Map<string, Distance>,
@@ -55,15 +119,20 @@ const recursiveSolution = (
   });
 
   const steps = sortedRK
-    .slice(0, Math.ceil((7 * sortedRK.length) / 12))
+    .slice(0, Math.ceil((6 * sortedRK.length) / 12))
     .map((key, i) => {
       if (log > 0) {
         console.log(log, key, i, reachableKeys.length);
       }
       const {steps} = distances.get(key)!;
+      if (steps > maximumSteps) {
+        return Number.POSITIVE_INFINITY;
+      }
+
       return (
         steps +
         recursiveSolution(
+          maximumSteps - steps,
           keysMissing.filter(k => k !== key),
           keysCollected.concat(key),
           allDistances.get(key)!,
