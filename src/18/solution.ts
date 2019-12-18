@@ -10,44 +10,49 @@ const solution1 = (inputLines: string[]) => {
   const startRow = map.findIndex(line => line.includes('@'));
   const startCol = map[startRow].indexOf('@');
 
-  const doorsOpen = new Set<string>();
-  let totalSteps = 0;
-  while (true) {
-    const [pos, steps] = findClosestKey(map, [startRow, startCol], doorsOpen);
+  const keys = findKeys(map);
 
-    console.log(pos, steps);
-
-    if (!pos.length) {
-      return totalSteps;
-    }
-    totalSteps += steps;
-
-    const key = map[pos[0]][pos[1]];
-    console.log(key);
-    doorsOpen.add(key.toUpperCase());
-  }
-
+  return getShortestPath(
+    map,
+    new Set<string>(),
+    keys,
+    [startRow, startCol],
+    true
+  );
   // It's not 6398
 };
 
 const keyRegex = /^[a-z]$/;
+const findKeys = (map: string[][]) => {
+  const result: number[][] = [];
+  map.forEach((row, r) => {
+    row.forEach((col, c) => {
+      if (keyRegex.test(map[r][c])) {
+        result.push([r, c]);
+      }
+    });
+  });
+  return result;
+};
+
 const doorRegex = /^[A-Z]$/;
-const findClosestKey = (
+const countSteps = (
   map: string[][],
-  pos: number[],
-  doorsOpen: Set<string>
-): [number[], number] => {
-  if (keyRegex.test(map[pos[0]][pos[1]])) {
-    return [pos, 0];
+  doorsOpen: Set<string>,
+  from: number[],
+  to: number[]
+) => {
+  if (from.join(',') === to.join(',')) {
+    return 0;
   }
 
   const positionsVisited = new Set();
-  positionsVisited.add(pos.join(','));
+  positionsVisited.add(from.join(','));
   let positionsToVisit = [
-    [1, pos[0] + 1, pos[1]],
-    [1, pos[0] - 1, pos[1]],
-    [1, pos[0], pos[1] + 1],
-    [1, pos[0], pos[1] - 1],
+    [1, from[0] + 1, from[1]],
+    [1, from[0] - 1, from[1]],
+    [1, from[0], from[1] + 1],
+    [1, from[0], from[1] - 1],
   ];
 
   while (positionsToVisit.length) {
@@ -55,11 +60,11 @@ const findClosestKey = (
     if (positionsVisited.has(pos.join(','))) {
       continue;
     }
+    if (pos.join(',') === to.join(',')) {
+      return steps;
+    }
 
     const char = map[pos[0]][pos[1]];
-    if (keyRegex.test(char) && !doorsOpen.has(char.toUpperCase())) {
-      return [pos, steps];
-    }
     positionsVisited.add(pos.join(','));
 
     const isWall =
@@ -75,7 +80,35 @@ const findClosestKey = (
       ];
     }
   }
-  return [[], 0];
+  return -1;
+};
+
+const getShortestPath = (
+  map: string[][],
+  doorsOpen: Set<string>,
+  keys: number[][],
+  pos: number[],
+  isTopLevel = false
+) => {
+  if (keys.length === 0) {
+    return 0;
+  }
+
+  return keys
+    .map(key => {
+      const steps = countSteps(map, doorsOpen, pos, key);
+      if (steps < 0) {
+        return -1;
+      }
+      const char = map[key[0]][key[1]];
+      const newDoorsOpen = new Set(doorsOpen);
+      newDoorsOpen.add(char.toUpperCase());
+      const newKeys = keys.filter(k => k !== key);
+      console.log(key, keys.length, newKeys.length, 'rec');
+      return steps + getShortestPath(map, newDoorsOpen, newKeys, key);
+    })
+    .filter(v => v >= 0)
+    .reduce((a, b) => Math.min(a, b));
 };
 
 const solution2 = (inputLines: string[]) => {
