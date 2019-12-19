@@ -59,7 +59,6 @@ export function* runIntcode(
         ip += 2;
         break;
       case 4:
-        console.log(a);
         yield {
           type: 'output',
           value: a,
