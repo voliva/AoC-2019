@@ -1,12 +1,4 @@
 import TinyQueue from 'tinyqueue';
-import { mapValues } from 'lodash';
-
-const readInput = (inputLines: string[]) => {
-  // [row][col]
-  return inputLines.map(line => {
-    return line.split('');
-  });
-};
 
 interface Distance {
   steps: number;
@@ -20,27 +12,21 @@ const solution1 = (inputLines: string[]) => {
   const keys = findKeys(map);
 
   const allKeys = keys.map(([key]) => key);
-  const originDistances = countSteps(map, [startRow, startCol], allKeys);
   const keyDistances = keys.reduce((distances, [key, pos]) => {
     const keyDistances = countSteps(map, pos, allKeys);
     distances.set(key, keyDistances);
     return distances;
   }, new Map<string, Map<string, Distance>>());
 
-  // It's not 5976
-  return recursiveSolution(
-    allKeys,
-    [],
-    originDistances,
-    keyDistances,
-    {}
-  );
+  const originDistances = countSteps(map, [startRow, startCol], allKeys);
+  keyDistances.set('@', originDistances);
+
+  return recursiveSolution(allKeys, ['@'], keyDistances, {});
 };
 
 const recursiveSolution = (
   keysMissing: string[],
-  keysCollected: string[],
-  distances: Map<string, Distance>,
+  origins: string[],
   allDistances: Map<string, Map<string, Distance>>,
   cache: Record<string, Record<string, number>>
 ): number => {
@@ -48,36 +34,59 @@ const recursiveSolution = (
     return 0;
   }
 
-  const reachableKeys = keysMissing.filter(key => {
-    const {doors} = distances.get(key)!;
-    return doors.every(door => keysCollected.includes(door.toLowerCase()));
-  });
-
-  if (!reachableKeys.length) {
-    return Number.POSITIVE_INFINITY;
+  const cacheKey = keysMissing.join(',');
+  const originKey = origins.join(',');
+  cache[cacheKey] = cache[cacheKey] || {};
+  if (originKey in cache[cacheKey]) {
+    return cache[cacheKey][originKey];
   }
 
-  let minimum:number = Number.POSITIVE_INFINITY;
-  reachableKeys.forEach(key => {
-    const {steps} = distances.get(key)!;
-
-    const newKeysMissing = keysMissing.filter(k => k !== key);
-    const cacheKey = newKeysMissing.join(',');
-    cache[cacheKey] = cache[cacheKey] || {};
-
-    const subTreeSteps = key in cache[cacheKey] ? cache[cacheKey][key] : recursiveSolution(
-      newKeysMissing,
-      keysCollected.concat(key),
-      allDistances.get(key)!,
-      allDistances,
-      cache
+  let minimum: number = Number.POSITIVE_INFINITY;
+  origins.forEach((origin, i) => {
+    const reachableKeys = getReachableKeys(
+      keysMissing,
+      allDistances.get(origin)!
     );
-    cache[cacheKey][key] = subTreeSteps;
+    const newOrigins = [...origins];
 
-    minimum = Math.min(minimum, steps + subTreeSteps);
+    reachableKeys.forEach(({key, steps}) => {
+      newOrigins[i] = key;
+      const subTreeSteps = recursiveSolution(
+        keysMissing.filter(k => k !== key),
+        newOrigins,
+        allDistances,
+        cache
+      );
+
+      minimum = Math.min(minimum, steps + subTreeSteps);
+    });
   });
 
+  cache[cacheKey][originKey] = minimum;
+
   return minimum;
+};
+
+const getReachableKeys = (
+  keysMissing: string[],
+  distances: Map<string, Distance>
+) =>
+  keysMissing
+    .map(key => ({
+      key,
+      ...distances.get(key)!,
+    }))
+    .filter(
+      ({doors}) =>
+        doors &&
+        (doors.length === 0 || !doors.some(door => keysMissing.includes(door)))
+    );
+
+const readInput = (inputLines: string[]) => {
+  // [row][col]
+  return inputLines.map(line => {
+    return line.split('');
+  });
 };
 
 const keyRegex = /^[a-z]$/;
@@ -85,8 +94,8 @@ const findKeys = (map: string[][]) => {
   const result: [string, number[]][] = [];
   map.forEach((row, r) => {
     row.forEach((col, c) => {
-      if (keyRegex.test(map[r][c])) {
-        result.push([map[r][c], [r, c]]);
+      if (keyRegex.test(col)) {
+        result.push([col, [r, c]]);
       }
     });
   });
@@ -116,7 +125,7 @@ const countSteps = (map: string[][], from: number[], keys: string[]) => {
       [1, [], [from[0], from[1] + 1]],
       [1, [], [from[0], from[1] - 1]],
     ],
-    () => 0
+    (a, b) => a[0] - b[0]
   );
 
   while (positionsToVisit.length && result.size < keys.length) {
@@ -154,7 +163,40 @@ const countSteps = (map: string[][], from: number[], keys: string[]) => {
 };
 
 const solution2 = (inputLines: string[]) => {
-  return inputLines.length;
+  const map = readInput(inputLines);
+  const centerRow = map.findIndex(line => line.includes('@'));
+  const centerCol = map[centerRow].indexOf('@');
+  map[centerRow][centerCol] = '#';
+  map[centerRow - 1][centerCol] = '#';
+  map[centerRow + 1][centerCol] = '#';
+  map[centerRow][centerCol - 1] = '#';
+  map[centerRow][centerCol + 1] = '#';
+
+  const robots = [
+    [centerRow - 1, centerCol - 1],
+    [centerRow + 1, centerCol - 1],
+    [centerRow - 1, centerCol + 1],
+    [centerRow + 1, centerCol + 1],
+  ];
+
+  const keys = findKeys(map);
+
+  const allKeys = keys.map(([key]) => key);
+  const keyDistances = keys.reduce((distances, [key, pos]) => {
+    const keyDistances = countSteps(map, pos, allKeys);
+    distances.set(key, keyDistances);
+    return distances;
+  }, new Map<string, Map<string, Distance>>());
+
+  const botDistances = robots.map(bot => countSteps(map, bot, allKeys));
+  botDistances.forEach((distances, i) => keyDistances.set(`${i}`, distances));
+
+  return recursiveSolution(
+    allKeys,
+    robots.map((_, i) => `${i}`),
+    keyDistances,
+    {}
+  );
 };
 
 export {solution1, solution2};
