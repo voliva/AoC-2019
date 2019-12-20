@@ -1,4 +1,5 @@
 import TinyQueue from 'tinyqueue';
+import { mapValues } from 'lodash';
 
 const readInput = (inputLines: string[]) => {
   // [row][col]
@@ -11,6 +12,7 @@ interface Distance {
   steps: number;
   doors: string[];
 }
+declare const process;
 const solution1 = (inputLines: string[]) => {
   const map = readInput(inputLines);
   const startRow = map.findIndex(line => line.includes('@'));
@@ -41,32 +43,41 @@ const solution1 = (inputLines: string[]) => {
     }
   }
 
-  // const getCacheSize = (cache: Record<string, Record<string, number>>) => {
-  //   return Object.keys(cache).reduce(
-  //     (total, key) => total + Object.keys(cache[key]).length,
-  //     0
-  //   );
-  // };
-
-  const MAX = 6398;
-  const K = 2;
-  for (let n = 2; n < allKeys.length; n++) {
-    const max = Math.min(
-      MAX,
-      ((K * (MAX - MAX / (allKeys.length / 2))) / (allKeys.length / 2)) * n
+  const getFlatCache = (cache: Record<string, Record<string, number>>) => {
+    const totalSize = Object.keys(cache).reduce(
+      (total, key) => total + Object.keys(cache[key]).length,
+      0
     );
+    const flatCache = new Array<[number, string, string]>(totalSize);
+    let i=0;
+    Object.keys(cache).forEach(combi => {
+      Object.keys(cache[combi]).forEach(start => {
+        flatCache[i] = [cache[combi][start], combi, start];
+        i++;
+      });
+    });
+    return flatCache;
+  };
+
+  for (let n = 2; n < allKeys.length; n++) {
+    const combinations = Object.keys(distancesCache);
+    const distancesCacheKeys = mapValues(distancesCache, c => Object.keys(c));
     const newCache: Record<string, Record<string, number>> = {};
+
     allKeys.forEach((origin, i) => {
-      console.log(`${n}/${allKeys.length} ${max} ${i}/${allKeys.length}`);
+      console.log(`${n}/${allKeys.length} ${i}/${allKeys.length}`);
       const distances = keyDistances.get(origin)!;
 
-      const combinations = Object.keys(distancesCache);
-      combinations.forEach(combi => {
+      combinations.forEach((combi, j) => {
+        if(n >= 8 && n <= 16 && j % 100000 === 0) {
+          console.log(`${n}/${allKeys.length} ${i}/${allKeys.length} ${j}/${combinations.length}`);
+        }
+
         if (combi.includes(origin)) {
           return;
         }
         let minimum = Number.POSITIVE_INFINITY;
-        Object.keys(distancesCache[combi]).forEach(start => {
+        distancesCacheKeys[combi].forEach(start => {
           const distance = distances.get(start)!;
           if (distance.doors.some(door => combi.includes(door.toLowerCase()))) {
             return;
@@ -74,11 +85,7 @@ const solution1 = (inputLines: string[]) => {
           const totalDistance = distance.steps + distancesCache[combi][start];
           minimum = Math.min(minimum, totalDistance);
         });
-        if (minimum === Number.POSITIVE_INFINITY) {
-          return;
-        }
-
-        if (minimum > max) {
+        if (minimum > 6400) {
           return;
         }
 
@@ -91,6 +98,17 @@ const solution1 = (inputLines: string[]) => {
         newCache[newCombi][origin] = minimum;
       });
     });
+    
+    // const flatCache = getFlatCache(newCache);
+    // if(flatCache.length > maxCacheSize) {
+    //   flatCache.sort((a,b) => b[0] - a[0]);
+    //   for(let i=0; i<flatCache.length-maxCacheSize; i++) {
+    //     const [_, combi, start] = flatCache[i];
+    //     delete newCache[combi][start];
+    //   }
+    //   console.log(flatCache.length, 'reduced', flatCache[0], flatCache[flatCache.length-maxCacheSize-1]);
+    // }
+
     distancesCache = newCache;
   }
 

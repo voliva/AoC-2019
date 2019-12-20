@@ -8,10 +8,12 @@
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^8.1.0",
+    "lodash": "^4.17.15",
     "ramda": "^0.26.1",
     "tinyqueue": "^2.0.3"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.149",
     "cross-env": "^6.0.3",
     "prettier": "^1.19.1",
     "ts-node": "^8.5.4",
