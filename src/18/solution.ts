@@ -26,69 +26,138 @@ const solution1 = (inputLines: string[]) => {
     return distances;
   }, new Map<string, Map<string, Distance>>());
 
-  // Now I'm thinking that I don't need to calculate the permutations...
-  // Use the same distancesCache: At first it will be all pairs of 2.
-  // Then loop through all the keys and calculate length=3 for every pair in distancesCache that doesn't use that key
-  // and so on
-  const distancesCache = new Map<string, number>();
-  for(let n = 3; n<allKeys.length; n++) {
-    const groups = getAllStartingGroups(allKeys, n);
-    groups.forEach((group, i) => {
-      console.log(n, `${i}/${groups.length}`);
-      const [start, ...missingKeys] = group;
-      const minimum = iterativeSolution(missingKeys, keyDistances.get(start)!, keyDistances, distancesCache);
-      distancesCache.set(group.join(','), minimum);
-    });
-    console.log(distancesCache.size, n);
+  let distancesCache: Record<string, Record<string, number>> = {};
+  for (let [start, distances] of keyDistances) {
+    for (let [end, distance] of distances) {
+      if (start === end) {
+        continue;
+      }
+      if (distance.doors.includes(end.toUpperCase())) {
+        continue;
+      }
+      const key = [start, end].sort().join(',');
+      distancesCache[key] = distancesCache[key] || {};
+      distancesCache[key][start] = distance.steps;
+    }
   }
-  // return recursiveSolution(6292, allKeys, [], originDistances, keyDistances, 4);
-  // return iterativeSolution(allKeys, originDistances, keyDistances, null as any);
-  // It's less than 6292
+
+  // const getCacheSize = (cache: Record<string, Record<string, number>>) => {
+  //   return Object.keys(cache).reduce(
+  //     (total, key) => total + Object.keys(cache[key]).length,
+  //     0
+  //   );
+  // };
+
+  const MAX = 6398;
+  const K = 2;
+  for (let n = 2; n < allKeys.length; n++) {
+    const max = Math.min(
+      MAX,
+      ((K * (MAX - MAX / (allKeys.length / 2))) / (allKeys.length / 2)) * n
+    );
+    const newCache: Record<string, Record<string, number>> = {};
+    allKeys.forEach((origin, i) => {
+      console.log(`${n}/${allKeys.length} ${max} ${i}/${allKeys.length}`);
+      const distances = keyDistances.get(origin)!;
+
+      const combinations = Object.keys(distancesCache);
+      combinations.forEach(combi => {
+        if (combi.includes(origin)) {
+          return;
+        }
+        let minimum = Number.POSITIVE_INFINITY;
+        Object.keys(distancesCache[combi]).forEach(start => {
+          const distance = distances.get(start)!;
+          if (distance.doors.some(door => combi.includes(door.toLowerCase()))) {
+            return;
+          }
+          const totalDistance = distance.steps + distancesCache[combi][start];
+          minimum = Math.min(minimum, totalDistance);
+        });
+        if (minimum === Number.POSITIVE_INFINITY) {
+          return;
+        }
+
+        if (minimum > max) {
+          return;
+        }
+
+        const newCombi = combi
+          .split(',')
+          .concat([origin])
+          .sort()
+          .join(',');
+        newCache[newCombi] = newCache[newCombi] || {};
+        newCache[newCombi][origin] = minimum;
+      });
+    });
+    distancesCache = newCache;
+  }
+
+  console.log(distancesCache);
+  const resultDistance = Object.values(distancesCache)[0];
+
+  let minimum = Number.POSITIVE_INFINITY;
+  allKeys.forEach(key => {
+    const distance = originDistances.get(key)!;
+    if (distance.doors.length > 0) {
+      return;
+    }
+    minimum = Math.min(minimum, distance.steps + resultDistance[key]);
+  }, []);
+
+  return minimum;
 };
 
 const getAllGroups = <T>(array: Array<T>, n: number): Array<Array<T>> => {
-  if(n >= array.length) {
+  if (n >= array.length) {
     return [array];
   }
 
   const incrementKey = (keyArr: Array<number>, arrayLength = keyArr.length) => {
-    keyArr[arrayLength-1]++;
-    if(keyArr[arrayLength-1] >= array.length) {
-      if(arrayLength === 1) {
+    keyArr[arrayLength - 1]++;
+    if (keyArr[arrayLength - 1] >= array.length) {
+      if (arrayLength === 1) {
         return false;
       }
-      while(incrementKey(keyArr, arrayLength - 1) && keyArr[arrayLength-2] + 1 >= array.length);
-      keyArr[arrayLength-1] = keyArr[arrayLength-2] + 1;
-      if(keyArr[arrayLength-1] >= array.length) {
+      while (
+        incrementKey(keyArr, arrayLength - 1) &&
+        keyArr[arrayLength - 2] + 1 >= array.length
+      );
+      keyArr[arrayLength - 1] = keyArr[arrayLength - 2] + 1;
+      if (keyArr[arrayLength - 1] >= array.length) {
         return false;
       }
     }
     return true;
-  }
+  };
 
   const result = new Array<Array<T>>();
   const keys = new Array(n).fill(0).map((_, i) => i);
   do {
     result.push(keys.map(k => array[k]));
-  }while(incrementKey(keys));
+  } while (incrementKey(keys));
 
   return result;
-}
+};
 
-const getAllStartingGroups = <T>(array: Array<T>, n: number): Array<Array<T>> => {
+const getAllStartingGroups = <T>(
+  array: Array<T>,
+  n: number
+): Array<Array<T>> => {
   let result: Array<Array<T>> = [];
-  array.forEach(value => result = result.concat(
-    getAllGroups(
-      array.filter(v => v !== value),
-      n-1
-    ).map(group => ([
-      value,
-      ...group
-    ]))
-  ));
+  array.forEach(
+    value =>
+      (result = result.concat(
+        getAllGroups(
+          array.filter(v => v !== value),
+          n - 1
+        ).map(group => [value, ...group])
+      ))
+  );
 
-  return result
-}
+  return result;
+};
 
 // Priority queue where I'm always proceeding on the one with the less steps
 const iterativeSolution = (
@@ -99,7 +168,10 @@ const iterativeSolution = (
 ) => {
   const reachableKeys = missingKeys.filter(key => {
     const {doors} = originDistances.get(key)!;
-    return doors.filter(door => missingKeys.includes(door.toLowerCase())).length === 0;
+    return (
+      doors.filter(door => missingKeys.includes(door.toLowerCase())).length ===
+      0
+    );
   });
 
   if (!reachableKeys.length) {
@@ -122,12 +194,10 @@ const iterativeSolution = (
       continue;
     }
 
-    const stepMissingKeys = missingKeys.filter(key => !keysUnlocked.includes(key));
-    const distanceCacheKey = [
-      currentKey,
-      ...stepMissingKeys
-        .sort()
-    ].join(',');
+    const stepMissingKeys = missingKeys.filter(
+      key => !keysUnlocked.includes(key)
+    );
+    const distanceCacheKey = [currentKey, ...stepMissingKeys.sort()].join(',');
 
     if (distancesCache.has(distanceCacheKey)) {
       const totalSteps = steps + distancesCache.get(distanceCacheKey)!;
