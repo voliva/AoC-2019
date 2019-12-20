@@ -8,7 +8,7 @@ import {
 const solution1 = (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
 
-  const result = runIntcodeFromArray(program, []);
+  const result = runIntcodeFromArray(program, [], true);
   const blocks = [] as any[];
   for (let i = 0; i < result.length; i += 3) {
     blocks.push({

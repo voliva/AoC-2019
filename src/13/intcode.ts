@@ -10,91 +10,100 @@ interface IntcodeDoneAction {
 }
 
 export function* runIntcode(
-  program: number[]
+  program: number[],
+  debugMode?: boolean
 ): Generator<IntcodeInAction | IntcodeOutAction, IntcodeDoneAction, number> {
   let mem = [...program];
 
-  let ip = 0;
-  let opcode: ReturnType<typeof readOpcode>;
-  let relativeBase = 0;
-  while ((opcode = readOpcode(mem[ip])).operation !== 99) {
-    const getValue = (mode: number, param: number) => {
-      if (mode === 0) {
-        return mem[param] || 0;
-      }
-      if (mode === 1) {
-        return param;
-      }
-      return mem[relativeBase + param] || 0;
-    };
-    const setValue = (mode: number, param: number, value: number) => {
-      if (mode === 0) {
-        mem[param] = value;
-      }
-      if (mode === 1) {
-        throw new Error('mode 1 doesnt work for writes');
-      }
-      mem[relativeBase + param] = value;
-    };
-    const aParam = mem[ip + 1];
-    const bParam = mem[ip + 2];
-    const a = getValue(opcode.modeA, aParam);
-    const b = getValue(opcode.modeB, bParam);
-    const dest = mem[ip + 3];
+  const pad = (value: number, n: number) => {
+    let res = value.toString();
+    while(res.length < n) {
+      res = ' ' + res;
+    }
+    return res;
+  }
+  const debug = (operation: string, ...pointers: any[]) => {
+    if(!debugMode) return;
+    const dest = pointers.pop();
+    let logParams = [pad(ip, 4), operation];
+    if(dest) {
+      logParams.push(`${dest} <-`);
+    }
+    logParams = logParams.concat(pointers.map(pointer => `${pointer}(${mem[pointer]})`));
 
-    switch (opcode.operation) {
+    console.log(...logParams);
+  }
+
+  let ip = 0;
+  let instruction: ReturnType<typeof readInstruction>;
+  let relativeBase = 0;
+  while ((instruction = readInstruction(mem, relativeBase, ip)).operation !== 99) {
+    const { operation, pointers, values } = instruction;
+
+    switch (operation) {
       case 1:
-        setValue(opcode.modeC, dest, a + b);
+        debug('add', ...pointers);
+        mem[pointers[2]] = values[0] + values[1];
         ip += 4;
         break;
       case 2:
-        setValue(opcode.modeC, dest, a * b);
+        debug('mul', ...pointers);
+        mem[pointers[2]] = values[0] * values[1];
         ip += 4;
         break;
       case 3:
         const next = yield {
           type: 'input',
         };
-        setValue(opcode.modeA, aParam, next);
+        debug(`in ${next}`, pointers[0]);
+        mem[pointers[0]] = next;
         ip += 2;
         break;
       case 4:
+        debug(`out`, pointers[0], null);
         yield {
           type: 'output',
-          value: a,
+          value: values[0],
         };
         ip += 2;
         break;
       case 5:
-        if (a !== 0) {
-          ip = b;
+        debug(`jnz`, ...pointers.slice(0, 2), null);
+        if (values[0] !== 0) {
+          ip = values[1];
         } else {
           ip += 3;
         }
         break;
       case 6:
-        if (a === 0) {
-          ip = b;
+        debug(`jez`, ...pointers.slice(0, 2), null);
+        if (values[0] === 0) {
+          ip = values[1];
         } else {
           ip += 3;
         }
         break;
       case 7:
-        setValue(opcode.modeC, dest, a < b ? 1 : 0);
+        debug('clt', ...pointers);
+        mem[pointers[2]] = values[0] < values[1] ? 1 : 0;
         ip += 4;
         break;
       case 8:
-        setValue(opcode.modeC, dest, a === b ? 1 : 0);
+        debug('ceq', ...pointers);
+        mem[pointers[2]] = values[0] === values[1] ? 1 : 0;
         ip += 4;
         break;
       case 9:
-        relativeBase += a;
+        debug('rel', pointers[0], 'relativeBase');
+        relativeBase += values[0];
         ip += 2;
         break;
       default:
-        throw new Error('unknown opcode ' + JSON.stringify(opcode));
+        throw new Error('unknown opcode ' + JSON.stringify(operation));
     }
   }
+
+  debug('halt', null);
 
   return {
     type: 'done' as const,
@@ -103,9 +112,10 @@ export function* runIntcode(
 
 export function* runIntcodeFromCallback(
   program: number[],
-  getNextInput: () => number
+  getNextInput: () => number,
+  debugMode?: boolean
 ) {
-  const process = runIntcode(program);
+  const process = runIntcode(program, debugMode);
   let lastReadValue = 0;
   let result: IteratorResult<IntcodeInAction | IntcodeOutAction>;
   while ((result = process.next(lastReadValue))) {
@@ -126,7 +136,8 @@ export function* runIntcodeFromCallback(
 
 export function runIntcodeFromIterator(
   program: number[],
-  input: Iterator<number>
+  input: Iterator<number>,
+  debugMode?: boolean
 ) {
   return runIntcodeFromCallback(program, () => {
     const inputResult = input.next();
@@ -134,11 +145,11 @@ export function runIntcodeFromIterator(
       throw new Error('Intcode wants to read, but input iterator has finished');
     }
     return inputResult.value;
-  });
+  }, debugMode);
 }
 
-export function runIntcodeFromArray(program: number[], input: number[]) {
-  const result = runIntcodeFromIterator(program, input[Symbol.iterator]());
+export function runIntcodeFromArray(program: number[], input: number[], debugMode?: boolean) {
+  const result = runIntcodeFromIterator(program, input[Symbol.iterator](), debugMode);
   return [...result];
 }
 
@@ -202,6 +213,32 @@ export const bufferIterator = <T>(
 
 export const bufferCountIterator = <T>(count: number, iterator: Iterator<T>) =>
   bufferIterator((_, buffer) => buffer.length === count, iterator);
+
+const readInstruction = (program: number[], relativeBase: number, ip: number) => {
+  const {operation, modeA, modeB, modeC} = readOpcode(program[ip]);
+  const getPointer = (mode: number, position: number) => {
+    switch(mode) {
+      case 0:
+        return program[position];
+      case 1:
+        return position;
+      case 2:
+        return program[position] + relativeBase;
+    }
+    return 0;
+  }
+  const pointers = [
+    getPointer(modeA, ip+1),
+    getPointer(modeB, ip+2),
+    getPointer(modeC, ip+3),
+  ];
+  const values = pointers.map(p => program[p]);
+  return {
+    operation,
+    pointers,
+    values
+  }
+}
 
 const readOpcode = opcode => {
   const operation = opcode % 100;
