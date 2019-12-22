@@ -33,6 +33,11 @@ diff@^4.0.1:
   resolved "https://registry.yarnpkg.com/diff/-/diff-4.0.1.tgz#0c667cb467ebbb5cea7f14f135cc2dba7780a8ff"
   integrity sha512-s2+XdvhPCOF01LRQBC8hf4vhbVmI2CGS5aZnxLJlT5FtdhPCDFq80q++zK2KlrVorVDdL5BOGZ/VfLrVtYNF+Q==
 
+extgcd@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/extgcd/-/extgcd-1.0.0.tgz#5f9f171ffe7b08784dd94fb40c114cc20878b8a6"
+  integrity sha512-bUbH6aIgLzfqCTmDGhdsmJA2hMUaszsZUrDH70y0XBOL7CF9Jir0wZiHqIkvWm1Jr6AdA/lNvBkbYZRdJJUNWQ==
+
 fs-extra@^8.1.0:
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-8.1.0.tgz#49d43c45a88cd9677668cb7be1b46efdb8d2e1c0"
