@@ -72,8 +72,8 @@ const solution1_prev = (inputLines: string[]) => {
 const solution2 = (inputLines: string[]) => {
   const inverseInput = [...inputLines].reverse();
 
-  const N = 119315717514047;
-  // const N = 10007;
+  // const N = 119315717514047;
+  const N = 10007;
 
   const add = (a: number, b: number) => (a + b) % N;
   const sub = (a: number, b: number) => {
@@ -200,9 +200,12 @@ const solution2 = (inputLines: string[]) => {
   // inverseIdx(2020) + (base + 2020 * (delta - 1)) * Sum(delta^i) (from i=1 to n-1)
   // The Sum(delta^i) is a geometric series. The formula for that is:
   // Sum(delta^i) = (delta^(n+1)-1)/(delta-1) if i=0..n
-  // So, normalizing => (delta^(n-1)-1)/(delta-1)
+  // So, normalizing => (delta^n-delta)/(delta-1)
 
   const exponent = (a: number, b: number) => {
+    if (b === 1) {
+      return a;
+    }
     if (b === 0) {
       return 1;
     }
@@ -215,34 +218,68 @@ const solution2 = (inputLines: string[]) => {
     return result;
   };
 
-  let tmp = 2020;
-  for (let r = 0; r < 10; r++) {
-    tmp = inverseIdx(tmp);
-    console.log(tmp);
-  }
+  // Test exponent function
+  // for (let i = 0; i < N; i++) {
+  //   const exp = exponent(i, 2);
+  //   const inv = invert(i);
+  //   console.log(i, multiply(exponent(i, 2), inv) === i);
+  // }
+  // return;
 
-  // const repeats = 101741582076661;
-  const result: number[] = [];
-  for (let r = 1; r < 10; r++) {
-    const exp = exponent(delta, r - 1);
-    console.log(delta, r - 1, exp);
-    const sum = multiply(exp - 1, invert(delta - 1));
-    // inverseIdx(2020) + add * Sum(delta^i)
-    result.push(
-      add(
-        inverseIdx(2020),
-        multiply(
-          add(
-            // (base + 2020 * (delta - 1))
-            base,
-            multiply(2020, delta - 1)
-          ),
-          sum
-        )
-      )
-    );
-  }
-  return result;
+  const resultFn = (n: number) => {
+    const y1 = inverseIdx(2020);
+    const factor = add(base, multiply(2020, delta - 1));
+    const sum = multiply(exponent(delta, n + 1) - 1, invert(delta - 1));
+    return add(y1, multiply(factor, sum));
+  };
+
+  const y1 = inverseIdx(2020);
+  const y2 = inverseIdx(y1);
+  const y3 = inverseIdx(y2);
+  const y4 = inverseIdx(y3);
+
+  // const predy2y1 = multiply(delta, add(sub(base, 2020), multiply(delta, 2020)));
+  const predy2y1 = multiply(delta, add(base, multiply(delta - 1, 2020)));
+  const predy2 = add(y1, predy2y1);
+  const predy3y2 = multiply(delta, predy2y1);
+  const predy3 = add(y2, predy3y2);
+  const predy4y3 = multiply(exponent(delta, 2), predy2y1);
+  const predy4 = add(y3, predy4y3);
+
+  console.log({y1, y2, y3, y4, predy2, predy3, predy4});
+  // console.log([y1, y2, y3, y4]);
+  // console.log([1, 2, 3, 4].map(resultFn));
+
+  // let tmp = 114037348233487;
+  // for (let i = 0; i < 3; i++) tmp = forwardIdx(tmp);
+  // console.log(tmp);
+
+  // const predy2y1 = multiply(delta, add(sub(base, 2020), multiply(delta, 2020)));
+  // const predy3y2 = multiply(delta, predy2y1);
+  // console.log(predy3y2);
+
+  // console.log({y1, y2, y3, y2y1: sub(y2, y1), y3y2: sub(y3, y2)});
+
+  // let tmp = 2020;
+  // for (let r = 0; r < 10; r++) {
+  //   tmp = inverseIdx(tmp);
+  //   console.log(tmp);
+  // }
+
+  // const result: number[] = [];
+  // for (let r = 1; r < 10; r++) {
+  //   // (delta^n-delta)/(delta-1)
+  //   const exp = exponent(delta, r);
+  //   const sum = multiply(sub(exp, delta), invert(delta - 1));
+  //   const inc = add(
+  //     // (base + 2020 * (delta - 1))
+  //     base,
+  //     multiply(2020, delta - 1)
+  //   );
+  //   // inverseIdx(2020) + inc * sum
+  //   result.push(add(inverseIdx(2020), multiply(inc, sum)));
+  // }
+  // return result;
 
   // More than 23420286820545
   // Less than 116864512047171
