@@ -48,54 +48,6 @@ const solution1 = (inputLines: string[]) => {
   }
 };
 
-const solution1_failed = (inputLines: string[]) => {
-  const program = inputLines[0].split(',').map(Number);
-  const N = 50;
-
-  const inputs = new Array(N).fill(0).map((_, i) => {
-    const input = createInputIterator(-1);
-    input.push(i);
-    return input;
-  });
-  const computers = inputs.map(input => runIntcodeFromIterator(program, input));
-
-  const computerWithPackets: Record<string, number> = {};
-  let i = 0;
-  const getNextComputer = () => {
-    const keys = Object.keys(computerWithPackets);
-    if (keys.length) {
-      computerWithPackets[keys[0]]--;
-      if (computerWithPackets[keys[0]] === 0) {
-        delete computerWithPackets[keys[0]];
-      }
-      return Number(keys[0]);
-    }
-    return i++;
-  };
-  while (true) {
-    const computer = computers[getNextComputer()];
-    const result = computer.next();
-    if (result.done) {
-      return;
-    }
-    const address = result.value;
-    const X = computer.next().value!;
-    const Y = computer.next().value!;
-    console.log(address, X, Y);
-
-    if (address === 255) {
-      return Y;
-    }
-    if (address >= N) {
-      throw new Error('address out of bounds');
-    }
-    inputs[address].push(X);
-    inputs[address].push(Y);
-    computerWithPackets[address] = computerWithPackets[address] || 0;
-    computerWithPackets[address]++;
-  }
-};
-
 const solution2 = (inputLines: string[]) => {
   const program = inputLines[0].split(',').map(Number);
   const N = 50;
