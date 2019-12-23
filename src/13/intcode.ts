@@ -203,7 +203,7 @@ export const bufferIterator = <T>(
 export const bufferCountIterator = <T>(count: number, iterator: Iterator<T>) =>
   bufferIterator((_, buffer) => buffer.length === count, iterator);
 
-const readOpcode = opcode => {
+export const readOpcode = opcode => {
   const operation = opcode % 100;
   opcode = Math.floor(opcode / 100);
   const modeA = opcode % 10;
