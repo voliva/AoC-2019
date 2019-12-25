@@ -10,6 +10,7 @@
     "extgcd": "^1.0.0",
     "fs-extra": "^8.1.0",
     "ramda": "^0.26.1",
+    "readline-sync": "^1.4.10",
     "tinyqueue": "^2.0.3"
   },
   "devDependencies": {

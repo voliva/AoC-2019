@@ -48,7 +48,7 @@ const solution1 = (inputLines: string[]) => {
   }, 0);
 };
 
-const createASCIIInputIterator = () => {
+export const createASCIIInputIterator = () => {
   const inputIterator = createInputIterator();
 
   return {
